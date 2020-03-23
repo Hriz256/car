@@ -122,7 +122,6 @@ BABYLON.SceneLoader.ImportMesh("", "assets/", "car.obj", scene, function (newMes
     plastic.alpha = 0.2;
     plastic.albedoColor = new BABYLON.Color3(0.206, 0.94, 1);
     plastic.reflectivityColor = new BABYLON.Color3(0.003, 0.003, 0.003);
-
     newMeshes.forEach(i => {
         i.parent = car;
         i.material = redMat
