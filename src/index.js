@@ -88,7 +88,7 @@ function room() {
 
 room();
 
-BABYLON.SceneLoader.ImportMesh("", "assets/", "car.obj", scene, function (newMeshes) {
+BABYLON.SceneLoader.ImportMesh("", "assets/", "car1.obj", scene, function (newMeshes) {
     const car = new BABYLON.Mesh("car", scene);
     car.position = new BABYLON.Vector3(0, 0, 0);
 
