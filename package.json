@@ -26,6 +26,7 @@
     "babylonjs-gui": "^4.1.0",
     "babylonjs-loaders": "^4.1.0",
     "cannon": "^0.6.2",
-    "oimo": "^1.0.9"
+    "oimo": "^1.0.9",
+    "babylonjs": "latest"
   }
 }
