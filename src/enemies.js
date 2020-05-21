@@ -87,6 +87,17 @@ class Body {
     }
 
     move() {
+        if (this.scene.getMeshByName('intersectBox') && this.sphere.intersectsMesh(this.scene.getMeshByName('intersectBox'))) {
+            this.x = this.sphere.position.x - car.chassisMesh.position.x;
+            this.z = this.sphere.position.z - car.chassisMesh.position.z;
+
+            // this.sphere.translate(
+            //     new BABYLON.Vector3(this.sphere.position.x - car.chassisMesh.position.x, 0, this.sphere.position.z - car.chassisMesh.position.z).normalize(),
+            //     this.sphereSpeed,
+            //     BABYLON.Space.WORLD
+            // );
+        }
+
         this.sphere.translate(
             new BABYLON.Vector3(this.x - this.sphere.position.x, 0, this.z - this.sphere.position.z).normalize(),
             this.sphereSpeed,
@@ -98,17 +109,6 @@ class Body {
 
         if (this.sphere.intersectsPoint(new BABYLON.Vector3(this.x, this.bodyHeight / 2, this.z))) {
             this.changeCoords();
-        }
-
-        if (this.scene.getMeshByName('intersectBox') && this.sphere.intersectsMesh(this.scene.getMeshByName('intersectBox'))) {
-            this.x = this.sphere.position.x - car.chassisMesh.position.x;
-            this.z = this.sphere.position.z - car.chassisMesh.position.z;
-
-            this.sphere.translate(
-                new BABYLON.Vector3(this.sphere.position.x - car.chassisMesh.position.x, 0, this.sphere.position.z - car.chassisMesh.position.z).normalize(),
-                this.sphereSpeed,
-                BABYLON.Space.WORLD
-            );
         }
     }
 

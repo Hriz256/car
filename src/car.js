@@ -1,5 +1,4 @@
 import * as BABYLON from 'babylonjs';
-import erratic from "./enemies";
 import {materials, mesh} from "./materials";
 
 const car = {
@@ -7,23 +6,30 @@ const car = {
     wheelMeshes: [],
     vehicleReady: false,
     steeringIncrement: .02,
-    steeringClamp: 0.4,
-    maxEngineForce: 2000,
-    maxBreakingForce: 30,
+    steeringClamp: 0.5,
+    maxEngineForce: 2500,
+    maxBreakingForce: 40,
     engineForce: 0,
     vehicleSteering: 0,
     breakingForce: 0,
     chassisMesh: null,
-    front_left: 0,
-    front_right: 1,
-    back_left: 2,
-    back_right: 3
+
+    setCarOrigin({x = 0, y = 0, z = 0}) {
+        const quat = new BABYLON.Quaternion();
+
+        const transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new Ammo.btVector3(x, y, z));
+        transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
+
+        this.vehicle.getRigidBody().setMotionState(new Ammo.btDefaultMotionState(transform));
+    }
 };
 
 const chassisWidth = 1.6;
 const chassisHeight = 0.5;
 const chassisLength = 4;
-const massVehicle = 400;
+const massVehicle = 350;
 
 const wheelAxisPositionBack = -1.13; // расположение оси задних колёс
 const wheelRadiusBack = .36;
@@ -35,11 +41,18 @@ const wheelRadiusFront = .36;
 const wheelHalfTrackFront = 0.74;
 const wheelAxisHeightFront = 0.4;
 
-const suspensionStiffness = 30; // насколько сильно машина будет проседать при разгоне и торможении
+const suspensionStiffness = 25; // насколько сильно машина будет проседать при разгоне и торможении
 const suspensionDamping = 0.3;
 const suspensionCompression = 4.4;
 const suspensionRestLength = 0.6;
 const rollInfluence = 0.0;
+
+const wheelsIndex = {
+    front_left: 0,
+    front_right: 1,
+    back_left: 2,
+    back_right: 3,
+};
 
 const actions = {
     accelerate: false,
@@ -99,16 +112,16 @@ const update = (scene) => {
         }
 
 
-        car.vehicle.applyEngineForce(car.engineForce, car.front_left);
-        car.vehicle.applyEngineForce(car.engineForce, car.front_right);
+        car.vehicle.applyEngineForce(car.engineForce, wheelsIndex.front_left);
+        car.vehicle.applyEngineForce(car.engineForce, wheelsIndex.front_right);
 
-        car.vehicle.setBrake(car.breakingForce / 2, car.front_left);
-        car.vehicle.setBrake(car.breakingForce / 2, car.front_right);
-        car.vehicle.setBrake(car.breakingForce, car.back_left);
-        car.vehicle.setBrake(car.breakingForce, car.back_right);
+        car.vehicle.setBrake(car.breakingForce / 2, wheelsIndex.front_left);
+        car.vehicle.setBrake(car.breakingForce / 2, wheelsIndex.front_right);
+        car.vehicle.setBrake(car.breakingForce, wheelsIndex.back_left);
+        car.vehicle.setBrake(car.breakingForce, wheelsIndex.back_right);
 
-        car.vehicle.setSteeringValue(car.vehicleSteering, car.front_left);
-        car.vehicle.setSteeringValue(car.vehicleSteering, car.front_right);
+        car.vehicle.setSteeringValue(car.vehicleSteering, wheelsIndex.front_left);
+        car.vehicle.setSteeringValue(car.vehicleSteering, wheelsIndex.front_right);
 
 
         let tm, p, q;
@@ -196,7 +209,7 @@ function createVehicle(scene, enemies, updatePopup, {carTask, wheelTask}) {
 
     const transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(0, 40, 0));
+    transform.setOrigin(new Ammo.btVector3(0, 10, 0));
     transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 
     const massOffset = new Ammo.btVector3(0, 0.4, 0);
@@ -258,10 +271,10 @@ function createVehicle(scene, enemies, updatePopup, {carTask, wheelTask}) {
     createCarBody(carTask);
     const {frontLeft, frontRight, backLeft, backRight} = createWheels(wheelTask, scene);
 
-    addWheel(true, new Ammo.btVector3(wheelHalfTrackFront, wheelAxisHeightFront, wheelAxisFrontPosition), wheelRadiusFront, frontLeft, car.front_left);
-    addWheel(true, new Ammo.btVector3(-wheelHalfTrackFront, wheelAxisHeightFront, wheelAxisFrontPosition), wheelRadiusFront, frontRight, car.front_right);
-    addWheel(false, new Ammo.btVector3(-wheelHalfTrackBack, wheelAxisHeightBack, wheelAxisPositionBack), wheelRadiusBack, backLeft, car.back_left);
-    addWheel(false, new Ammo.btVector3(wheelHalfTrackBack, wheelAxisHeightBack, wheelAxisPositionBack), wheelRadiusBack, backRight, car.back_right);
+    addWheel(true, new Ammo.btVector3(wheelHalfTrackFront, wheelAxisHeightFront, wheelAxisFrontPosition), wheelRadiusFront, frontLeft, wheelsIndex.front_left);
+    addWheel(true, new Ammo.btVector3(-wheelHalfTrackFront, wheelAxisHeightFront, wheelAxisFrontPosition), wheelRadiusFront, frontRight, wheelsIndex.front_right);
+    addWheel(false, new Ammo.btVector3(-wheelHalfTrackBack, wheelAxisHeightBack, wheelAxisPositionBack), wheelRadiusBack, backLeft, wheelsIndex.back_left);
+    addWheel(false, new Ammo.btVector3(wheelHalfTrackBack, wheelAxisHeightBack, wheelAxisPositionBack), wheelRadiusBack, backRight, wheelsIndex.back_right);
 
     update(scene);
 

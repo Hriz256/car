@@ -36,6 +36,7 @@ const main = async (scene, camera, canvas) => {
 
     const restartGame = () => {
         enemies.restart();
+        car.setCarOrigin({y: 10});
         timer.isStop = false;
         timer.restart(3);
     };

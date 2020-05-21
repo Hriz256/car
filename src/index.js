@@ -8,14 +8,6 @@ let scene = null;
 
 const createDefaultEngine = () => new BABYLON.Engine(canvas, true, {preserveDrawingBuffer: true, stencil: true});
 
-// const updateScene = () => {
-//     erratic.update();
-//     scene.dispose();
-//     scene = createScene();
-//     erratic.createBodies(scene);
-//     timer.update();
-// };
-
 const createScene = function () {
     const scene = new BABYLON.Scene(engine);
 

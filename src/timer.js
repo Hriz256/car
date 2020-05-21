@@ -1,7 +1,7 @@
 const timer = {
     isStop: false,
     countdown: new Date(),
-    responseTime: new Date(Date.now() + (1000 * 20 * 1)),
+    responseTime: new Date(Date.now() + (1000 * 60 * 2)),
 
     getTime() {
         const ms = timer.responseTime - Date.now();
