@@ -99,53 +99,94 @@ const update = (scene) => {
         }
 
 
-        if (car.vehicleReady) {
-            car.vehicle.applyEngineForce(car.engineForce, car.front_left);
-            car.vehicle.applyEngineForce(car.engineForce, car.front_right);
+        car.vehicle.applyEngineForce(car.engineForce, car.front_left);
+        car.vehicle.applyEngineForce(car.engineForce, car.front_right);
 
-            car.vehicle.setBrake(car.breakingForce / 2, car.front_left);
-            car.vehicle.setBrake(car.breakingForce / 2, car.front_right);
-            car.vehicle.setBrake(car.breakingForce, car.back_left);
-            car.vehicle.setBrake(car.breakingForce, car.back_right);
+        car.vehicle.setBrake(car.breakingForce / 2, car.front_left);
+        car.vehicle.setBrake(car.breakingForce / 2, car.front_right);
+        car.vehicle.setBrake(car.breakingForce, car.back_left);
+        car.vehicle.setBrake(car.breakingForce, car.back_right);
 
-            car.vehicle.setSteeringValue(car.vehicleSteering, car.front_left);
-            car.vehicle.setSteeringValue(car.vehicleSteering, car.front_right);
+        car.vehicle.setSteeringValue(car.vehicleSteering, car.front_left);
+        car.vehicle.setSteeringValue(car.vehicleSteering, car.front_right);
 
 
-            let tm, p, q;
+        let tm, p, q;
 
-            Array.from({length: car.vehicle.getNumWheels()}, (i, index) => {
-                car.vehicle.updateWheelTransform(index, true);
-                tm = car.vehicle.getWheelTransformWS(index);
-                p = tm.getOrigin();
-                q = tm.getRotation();
-                car.wheelMeshes[index].position.set(p.x(), p.y(), p.z());
-                car.wheelMeshes[index].rotationQuaternion.set(q.x(), q.y(), q.z(), q.w());
-                car.wheelMeshes[index].rotate(BABYLON.Axis.Z, Math.PI / 2);
-            });
-
-            tm = car.vehicle.getChassisWorldTransform();
+        Array.from({length: car.vehicle.getNumWheels()}, (i, index) => {
+            car.vehicle.updateWheelTransform(index, true);
+            tm = car.vehicle.getWheelTransformWS(index);
             p = tm.getOrigin();
             q = tm.getRotation();
-            car.chassisMesh.position.set(p.x(), p.y(), p.z());
-            car.chassisMesh.rotationQuaternion.set(q.x(), q.y(), q.z(), q.w());
-            car.chassisMesh.rotate(BABYLON.Axis.X, Math.PI);
-        }
+            car.wheelMeshes[index].position.set(p.x(), p.y(), p.z());
+            car.wheelMeshes[index].rotationQuaternion.set(q.x(), q.y(), q.z(), q.w());
+            car.wheelMeshes[index].rotate(BABYLON.Axis.Z, Math.PI / 2);
+        });
+
+        tm = car.vehicle.getChassisWorldTransform();
+        p = tm.getOrigin();
+        q = tm.getRotation();
+        car.chassisMesh.position.set(p.x(), p.y(), p.z());
+        car.chassisMesh.rotationQuaternion.set(q.x(), q.y(), q.z(), q.w());
+        car.chassisMesh.rotate(BABYLON.Axis.X, Math.PI);
     });
 };
 
-function createVehicle(scene, enemies, updatePopup) {
-    const quat = new BABYLON.Quaternion();
-    const wheelDirectionCS0 = new Ammo.btVector3(0, -1, 0);
-    const wheelAxleCS = new Ammo.btVector3(-1, 0, 0);
+const createIntersectPlane = () => {
+    const intersectBox = mesh.createBox({
+        name: 'intersectBox',
+        size: {x: 20, y: 20, z: 20},
+        position: {x: 0, y: 0, z: 0},
+        rotation: {x: Math.PI / 2, y: 0, z: 0},
+        material: materials['red']
+    });
 
+    intersectBox.isVisible = false;
+    intersectBox.material.wireframe = true;
+    intersectBox.parent = car.chassisMesh;
+};
+
+const createCarBody = (carTask) => {
     car.chassisMesh = mesh.createBox({
         size: {x: chassisWidth, y: chassisHeight, z: chassisLength},
         position: {x: 0, y: 0, z: 0},
-        material:  materials['lightColor']
+        material: materials['lightColor']
     });
+
     car.chassisMesh.rotationQuaternion = new BABYLON.Quaternion();
     car.chassisMesh.isVisible = false;
+
+    Array.from(carTask.loadedMeshes, item => {
+        item.parent = car.chassisMesh;
+        item.position.set(0, 0.4, -0.1);
+    });
+
+    createIntersectPlane();
+};
+
+const createWheels = (wheelTask, scene) => {
+    const frontLeft = new BABYLON.Mesh('wheel', scene);
+
+    Array.from(wheelTask.loadedMeshes, item => {
+        item.parent = frontLeft;
+        item.rotation.z = Math.PI / 2;
+    });
+
+    frontLeft.rotationQuaternion = new BABYLON.Quaternion();
+
+    const frontRight = frontLeft.clone('wheel2');
+    const backLeft = frontLeft.clone('wheel3');
+    const backRight = frontLeft.clone('wheel4');
+
+    Array.from([...backRight.getChildren(), ...frontLeft.getChildren()], item => item.rotation.z = Math.PI / -2);
+
+    return {frontLeft, frontRight, backLeft, backRight};
+};
+
+function createVehicle(scene, enemies, updatePopup, {carTask, wheelTask}) {
+    const quat = new BABYLON.Quaternion();
+    const wheelDirectionCS0 = new Ammo.btVector3(0, -1, 0);
+    const wheelAxleCS = new Ammo.btVector3(-1, 0, 0);
 
     const physicsWorld = scene.getPhysicsEngine().getPhysicsPlugin().world;
     const localInertia = new Ammo.btVector3(0, 0, 0);
@@ -155,7 +196,7 @@ function createVehicle(scene, enemies, updatePopup) {
 
     const transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(0, 0, 0));
+    transform.setOrigin(new Ammo.btVector3(0, 40, 0));
     transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 
     const massOffset = new Ammo.btVector3(0, 0.4, 0);
@@ -172,12 +213,11 @@ function createVehicle(scene, enemies, updatePopup) {
     body.setActivationState(4);
     body.isCar = true;
 
-
     function collisionCallbackFunc(cp, colObj0, colObj1) {
         const bodyIndex = enemies.getEnemiesArray().findIndex(i => i.body.physicsImpostor.physicsBody.ptr === colObj1);
         colObj0 = Ammo.wrapPointer(colObj0, Ammo.btRigidBody);
 
-        if (colObj0.isCar && bodyIndex !== - 1 && !enemies.getEnemiesArray()[bodyIndex].isStop) {
+        if (colObj0.isCar && bodyIndex !== -1 && !enemies.getEnemiesArray()[bodyIndex].isStop) {
             const isHuman = enemies.getEnemiesArray()[bodyIndex].isHuman;
 
             enemies.getEnemiesArray()[bodyIndex].isStop = true;
@@ -202,7 +242,8 @@ function createVehicle(scene, enemies, updatePopup) {
             suspensionRestLength,
             radius,
             tuning,
-            isFront);
+            isFront
+        );
 
         wheelInfo.set_m_suspensionStiffness(suspensionStiffness);
         wheelInfo.set_m_wheelsDampingRelaxation(suspensionDamping);
@@ -214,53 +255,15 @@ function createVehicle(scene, enemies, updatePopup) {
         car.wheelMeshes[index] = wheel;
     };
 
-    const assetsManager = new BABYLON.AssetsManager(scene);
-    const carTask = assetsManager.addMeshTask("car task", "", "assets/", "car2.obj");
-    const wheelTask = assetsManager.addMeshTask("wheel task", "", "assets/", "wheel.obj");
+    createCarBody(carTask);
+    const {frontLeft, frontRight, backLeft, backRight} = createWheels(wheelTask, scene);
 
-    carTask.onSuccess = ({loadedMeshes}) => {
-        Array.from(loadedMeshes, item => {
-            item.parent = car.chassisMesh;
-            item.position.set(0, 0.4, -0.1);
-        });
+    addWheel(true, new Ammo.btVector3(wheelHalfTrackFront, wheelAxisHeightFront, wheelAxisFrontPosition), wheelRadiusFront, frontLeft, car.front_left);
+    addWheel(true, new Ammo.btVector3(-wheelHalfTrackFront, wheelAxisHeightFront, wheelAxisFrontPosition), wheelRadiusFront, frontRight, car.front_right);
+    addWheel(false, new Ammo.btVector3(-wheelHalfTrackBack, wheelAxisHeightBack, wheelAxisPositionBack), wheelRadiusBack, backLeft, car.back_left);
+    addWheel(false, new Ammo.btVector3(wheelHalfTrackBack, wheelAxisHeightBack, wheelAxisPositionBack), wheelRadiusBack, backRight, car.back_right);
 
-        const intersectBox = mesh.createBox({
-            name: 'intersectBox',
-            size: {x: 20, y: 20, z: 20},
-            position: {x: 0, y: 0, z: 0},
-            rotation: {x: Math.PI / 2, y: 0, z: 0},
-            material: materials['red']
-        });
-
-        intersectBox.isVisible = false;
-        intersectBox.material.wireframe = true;
-        intersectBox.parent = car.chassisMesh;
-    };
-
-    wheelTask.onSuccess = ({loadedMeshes}) => {
-        const frontLeft = new BABYLON.Mesh('wheel', scene);
-        Array.from(loadedMeshes, item => {
-            item.parent = frontLeft;
-            item.rotation.z = Math.PI / 2;
-        });
-        frontLeft.rotationQuaternion = new BABYLON.Quaternion();
-
-        const frontRight = frontLeft.clone('wheel2');
-        const backLeft = frontLeft.clone('wheel3');
-        const backRight = frontLeft.clone('wheel4');
-
-        Array.from([...backRight.getChildren(), ...frontLeft.getChildren()], item => item.rotation.z = Math.PI / -2);
-
-        addWheel(true, new Ammo.btVector3(wheelHalfTrackFront, wheelAxisHeightFront, wheelAxisFrontPosition), wheelRadiusFront, frontLeft, car.front_left);
-        addWheel(true, new Ammo.btVector3(-wheelHalfTrackFront, wheelAxisHeightFront, wheelAxisFrontPosition), wheelRadiusFront, frontRight, car.front_right);
-        addWheel(false, new Ammo.btVector3(-wheelHalfTrackBack, wheelAxisHeightBack, wheelAxisPositionBack), wheelRadiusBack, backLeft, car.back_left);
-        addWheel(false, new Ammo.btVector3(wheelHalfTrackBack, wheelAxisHeightBack, wheelAxisPositionBack), wheelRadiusBack, backRight, car.back_right);
-
-        car.vehicleReady = true;
-        update(scene);
-    };
-
-    assetsManager.load();
+    update(scene);
 
     return car.chassisMesh;
 }

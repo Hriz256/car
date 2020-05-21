@@ -48,18 +48,24 @@ const createRect = ({height, width, top, left, thickness = 0}) => {
     return rect;
 };
 
-const createUpdatePopup = () => {
+const createPopup = (canvas, restartFunc) => {
     const advancedTexture = new GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
+    const buttonWidth = 370;
+    const buttonHeight = 110;
+
+    // Видимые постоянно элементы
 
     const timer = createText({text: '03:00:00', size: '46px', top: '50px'});
     timer.width = '210px';
     timer.fontStyle = 'italic';
     timer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
     timer.textHorizontalAlignment = 'left';
+    timer.zIndex = 10;
 
     const quantityRect = createRect({top: '37px', left: '-100px', width: '200px', height: '75px', thickness: 4});
     quantityRect.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
     quantityRect.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    quantityRect.zIndex = 10;
 
     const humansText = createText({text: 'HUMANS: 0/10', size: '20px', top: '50px'});
     const zombiesText = createText({text: 'ZOMBIES: 0/10', size: '20px', top: '80px'});
@@ -67,6 +73,7 @@ const createUpdatePopup = () => {
     Array.from([humansText, zombiesText], item => {
         item.width = '220px';
         item.left = '-50px';
+        item.zIndex = 10;
         item.textHorizontalAlignment = 'left';
         item.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
         item.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
@@ -74,31 +81,7 @@ const createUpdatePopup = () => {
 
     Array.from([timer, quantityRect, humansText, zombiesText], item => advancedTexture.addControl(item));
 
-    return {
-        updateCounter(isHuman, count) {
-            isHuman ? humansText.text = `HUMANS: ${count}/10` : zombiesText.text = `ZOMBIES: ${count}/10`;
-        },
-
-        updateTimer({ms, time}) {
-            const sec = time.getUTCSeconds();
-            const min = time.getUTCMinutes();
-
-            timer.text = ms > 0 ?
-                `${min > 9 ? '' : '0'}${min}:${sec > 9 ? '' : '0'}${sec}:${time.getUTCMilliseconds()}` :
-                `00:00:00`;
-        },
-
-        resetValues() {
-            humansText.text = 'HUMANS: 0/10';
-            zombiesText.text = 'ZOMBIES: 0/10';
-        }
-    }
-};
-
-const createFinishPopup = (canvas, restartFunc) => {
-    const advancedTexture = new GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
-    const buttonWidth = 370;
-    const buttonHeight = 110;
+    // Скрываемые элементы
 
     const backgroundRect = createRect({top: '0px', left: '0px', width: canvas.width, height: canvas.height});
     backgroundRect.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
@@ -116,6 +99,8 @@ const createFinishPopup = (canvas, restartFunc) => {
     buttonRestart.background = '#22b61f';
     buttonRestart.onPointerUpObservable.add(() => {
         restartFunc();
+        humansText.text = 'HUMANS: 0/10';
+        zombiesText.text = 'ZOMBIES: 0/10';
         showPopupElems(false);
     });
 
@@ -134,8 +119,21 @@ const createFinishPopup = (canvas, restartFunc) => {
             showPopupElems(true);
 
             message.text = isWin ? 'YOU WIN!' : 'GAME OVER!';
-        }
+        },
+
+        updateCounter(isHuman, count) {
+            isHuman ? humansText.text = `HUMANS: ${count}/10` : zombiesText.text = `ZOMBIES: ${count}/10`;
+        },
+
+        updateTimer({ms, time}) {
+            const sec = time.getUTCSeconds();
+            const min = time.getUTCMinutes();
+
+            timer.text = ms > 0 ?
+                `${min > 9 ? '' : '0'}${min}:${sec > 9 ? '' : '0'}${sec}:${time.getUTCMilliseconds()}` :
+                `00:00:00`;
+        },
     }
 };
 
-export {createFinishPopup, createUpdatePopup};
+export {createPopup};

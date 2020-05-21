@@ -31,9 +31,10 @@ const run = (newHuman, speed, scene) => {
 };
 
 class Body {
-    constructor(index, scene) {
+    constructor(index, scene, human) {
         this.scene = scene;
         this.bodyHeight = 2.5;
+        this.human = human;
         this.isHuman = index < 10;
         this.mass = 10;
         this.x = getX(20, 45);
@@ -44,16 +45,16 @@ class Body {
     }
 
     createSkeleton() {
-        new BABYLON.SceneLoader.ImportMesh('', 'assets/', 'human.babylon', this.scene, newMeshes => {
-            const human = newMeshes[0];
-            Array.from(newMeshes, item => item.scaling.set(1.3, 1.3, 1.3));
+        const human = this.human.clone('human');
+        human.skeleton = this.human.skeleton.clone('skeleton');
 
-            human.position.y = -this.bodyHeight / 2;
-            human.material = materials[this.isHuman ? 'green' : 'red'];
-            human.parent = this.body;
+        human.scaling.set(1.3, 1.3, 1.3);
+        human.position.y = -this.bodyHeight / 2;
+        human.material = materials[this.isHuman ? 'green' : 'red'];
+        human.parent = this.body;
+        human.isVisible = true;
 
-            run(human, 1, this.scene);
-        });
+        run(human, 1, this.scene);
     }
 
     createBody() {
@@ -78,17 +79,16 @@ class Body {
     updateBody() {
         this.changeCoords();
 
-        this.body.rotationQuaternion = new BABYLON.Quaternion();
-        this.body.position.set(this.x, 0, this.z);
-        this.sphere.position.set(this.x, this.bodyHeight / 2, this.z)
-        this.body.isStop = false;
+        this.body.dispose();
+        this.sphere.dispose();
+        this.isStop = false;
 
-        run(this.body.getChildren()[0], 1, this.scene);
+        this.createBody();
     }
 
     move() {
         this.sphere.translate(
-            new BABYLON.Vector3(this.x - this.sphere.position.x, this.bodyHeight / 2, this.z - this.sphere.position.z).normalize(),
+            new BABYLON.Vector3(this.x - this.sphere.position.x, 0, this.z - this.sphere.position.z).normalize(),
             this.sphereSpeed,
             BABYLON.Space.WORLD
         );
@@ -105,7 +105,7 @@ class Body {
             this.z = this.sphere.position.z - car.chassisMesh.position.z;
 
             this.sphere.translate(
-                new BABYLON.Vector3(this.sphere.position.x - car.chassisMesh.position.x, this.bodyHeight / 2, this.sphere.position.z - car.chassisMesh.position.z).normalize(),
+                new BABYLON.Vector3(this.sphere.position.x - car.chassisMesh.position.x, 0, this.sphere.position.z - car.chassisMesh.position.z).normalize(),
                 this.sphereSpeed,
                 BABYLON.Space.WORLD
             );
@@ -125,22 +125,21 @@ class Body {
     }
 }
 
-const createEnemies = (scene) => {
+const createEnemies = (scene, human) => {
     const enemiesCount = {
         'humans': 0,
         'zombies': 0
     };
 
-    const getEnemies = () => {
-        return Array.from({length: 20}, (item, index) => {
-            const enemy = new Body(index, scene);
-            enemy.createBody();
+    const newHuman = human.loadedMeshes[0];
+    newHuman.isVisible = false;
 
-            return enemy;
-        });
-    };
+    const enemies = Array.from({length: 20}, (item, index) => {
+        const enemy = new Body(index, scene, newHuman);
+        enemy.createBody();
 
-    let enemies = getEnemies();
+        return enemy;
+    });
 
     return {
         getEnemiesArray() {
@@ -152,9 +151,7 @@ const createEnemies = (scene) => {
         },
 
         restart() {
-            Array.from(enemies, item => {
-                item.updateBody();
-            });
+            Array.from(enemies, item => item.updateBody());
 
             enemiesCount['humans'] = 0;
             enemiesCount['zombies'] = 0;
