@@ -1,22 +1,18 @@
 const timer = {
+    isStop: false,
     countdown: new Date(),
-    responseTime: new Date(Date.now() + (1000 * 60 * 3)),
-
-    run() {
-        timer.countdown.setTime(timer.responseTime - Date.now());
-
-        if (timer.countdown.getUTCMinutes() > 0 || timer.countdown.getUTCSeconds() > 0 || timer.countdown.getUTCMilliseconds() > 100) {
-            requestAnimationFrame(timer.run);
-        }
-    },
+    responseTime: new Date(Date.now() + (1000 * 20 * 1)),
 
     getTime() {
-        return timer.countdown;
+        const ms = timer.responseTime - Date.now();
+        this.countdown.setTime(ms);
+
+        return {ms, time: timer.countdown};
     },
 
-    update(minutes) {
-        timer.countdown = new Date();
-        timer.responseTime = new Date(Date.now() + (1000 * 60 * minutes));
+    restart(minutes) {
+        this.countdown = new Date();
+        this.responseTime = new Date(Date.now() + (1000 * 60 * minutes));
     }
 };
 

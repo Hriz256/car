@@ -15,6 +15,8 @@ const createButton = ({text, width, height}) => {
     button.color = 'white';
     button.fontSize = '26px';
     button.fontWeight = 'bold';
+    button.hoverCursor = 'pointer';
+    button.isPointerBlocker = true;
     setShadow(button);
 
     return button;
@@ -26,8 +28,7 @@ const createText = ({text, size, top}) => {
     textBlock.text = text;
     textBlock.color = '#ffffff';
     textBlock.top = top;
-    textBlock.fontSize = 'size';
-    textBlock.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    textBlock.fontSize = size;
     textBlock.fontWeight = 'bold';
     setShadow(textBlock);
 
@@ -50,10 +51,11 @@ const createRect = ({height, width, top, left, thickness = 0}) => {
 const createUpdatePopup = () => {
     const advancedTexture = new GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
 
-    const timer = createText({text: '03:00:00', size: '50px', top: '50px'});
-    timer.fontSize = '46px';
+    const timer = createText({text: '03:00:00', size: '46px', top: '50px'});
+    timer.width = '210px';
     timer.fontStyle = 'italic';
-    timer.fontWeight = 'bold';
+    timer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    timer.textHorizontalAlignment = 'left';
 
     const quantityRect = createRect({top: '37px', left: '-100px', width: '200px', height: '75px', thickness: 4});
     quantityRect.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
@@ -66,6 +68,7 @@ const createUpdatePopup = () => {
         item.width = '220px';
         item.left = '-50px';
         item.textHorizontalAlignment = 'left';
+        item.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
         item.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
     });
 
@@ -73,16 +76,26 @@ const createUpdatePopup = () => {
 
     return {
         updateCounter(isHuman, count) {
-            isHuman ? humansText.text = `HUMANS: ${count}/10` : zombiesText.text = `ZOMBIES: ${count}/10`
+            isHuman ? humansText.text = `HUMANS: ${count}/10` : zombiesText.text = `ZOMBIES: ${count}/10`;
         },
 
-        updateTimer(time) {
-            timer.text = `0${time.getUTCMinutes()}:${time.getUTCSeconds()}:${time.getUTCMilliseconds()}`;
+        updateTimer({ms, time}) {
+            const sec = time.getUTCSeconds();
+            const min = time.getUTCMinutes();
+
+            timer.text = ms > 0 ?
+                `${min > 9 ? '' : '0'}${min}:${sec > 9 ? '' : '0'}${sec}:${time.getUTCMilliseconds()}` :
+                `00:00:00`;
+        },
+
+        resetValues() {
+            humansText.text = 'HUMANS: 0/10';
+            zombiesText.text = 'ZOMBIES: 0/10';
         }
     }
 };
 
-const createFinishPopup = (canvas) => {
+const createFinishPopup = (canvas, restartFunc) => {
     const advancedTexture = new GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
     const buttonWidth = 370;
     const buttonHeight = 110;
@@ -92,33 +105,35 @@ const createFinishPopup = (canvas) => {
     backgroundRect.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
     backgroundRect.background = '#92C74F';
 
-    const message = new GUI.TextBlock();
-    message.text = 'GAME OVER!';
-    message.color = '#ffffff';
-    message.top = `${-buttonHeight * 0.7}px`;
-    message.fontSize = '130px';
-    message.fontWeight = 'bold';
-    setShadow(message);
+    const message = createText({
+        size: '130px',
+        text: '',
+        top: `${-buttonHeight * 0.7}px`
+    });
 
     const buttonRestart = createButton({text: 'RESTART', width: buttonWidth, height: buttonHeight});
     buttonRestart.left = `${-buttonWidth / 2 - 25}px`;
     buttonRestart.background = '#22b61f';
+    buttonRestart.onPointerUpObservable.add(() => {
+        restartFunc();
+        showPopupElems(false);
+    });
 
     const buttonExit = createButton({text: 'EXIT GAME', width: buttonWidth, height: buttonHeight});
     buttonExit.left = `${buttonWidth / 2 + 25}px`;
     buttonExit.background = '#ec5050';
 
-    Array.from([backgroundRect, buttonRestart, buttonExit, message], item => {
-        advancedTexture.addControl(item);
-        // item.alpha = 0
-    });
+    function showPopupElems(show) {
+        Array.from([backgroundRect, buttonRestart, buttonExit, message], item => {
+            show ? advancedTexture.addControl(item) : advancedTexture.removeControl(item);
+        });
+    }
 
     return {
         showPopup(isWin) {
-            Array.from([backgroundRect, buttonRestart, buttonExit, message], item => {
-                advancedTexture.addControl(item);
-                item.alpha = 0
-            });
+            showPopupElems(true);
+
+            message.text = isWin ? 'YOU WIN!' : 'GAME OVER!';
         }
     }
 };

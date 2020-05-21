@@ -1,5 +1,5 @@
 import * as BABYLON from 'babylonjs';
-import erratic from "./erratic";
+import erratic from "./enemies";
 import {materials, mesh} from "./materials";
 
 const car = {
@@ -139,10 +139,12 @@ function createVehicle(scene, enemies, updatePopup) {
     const wheelDirectionCS0 = new Ammo.btVector3(0, -1, 0);
     const wheelAxleCS = new Ammo.btVector3(-1, 0, 0);
 
-    car.chassisMesh = new BABYLON.MeshBuilder.CreateBox("box", {width: chassisWidth, depth: chassisLength, height: chassisHeight}, scene);
+    car.chassisMesh = mesh.createBox({
+        size: {x: chassisWidth, y: chassisHeight, z: chassisLength},
+        position: {x: 0, y: 0, z: 0},
+        material:  materials['lightColor']
+    });
     car.chassisMesh.rotationQuaternion = new BABYLON.Quaternion();
-    car.chassisMesh.material = materials['green'];
-    car.chassisMesh.isCar = true;
     car.chassisMesh.isVisible = false;
 
     const physicsWorld = scene.getPhysicsEngine().getPhysicsPlugin().world;
@@ -153,7 +155,7 @@ function createVehicle(scene, enemies, updatePopup) {
 
     const transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(0, 5, 0));
+    transform.setOrigin(new Ammo.btVector3(0, 0, 0));
     transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 
     const massOffset = new Ammo.btVector3(0, 0.4, 0);
@@ -168,16 +170,18 @@ function createVehicle(scene, enemies, updatePopup) {
 
     const body = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(massVehicle, motionState, compound, localInertia));
     body.setActivationState(4);
+    body.isCar = true;
 
 
     function collisionCallbackFunc(cp, colObj0, colObj1) {
-        const bodyIndex = enemies.getEnemiesArray().findIndex(i => i.physicsImpostor.physicsBody.ptr === colObj1);
+        const bodyIndex = enemies.getEnemiesArray().findIndex(i => i.body.physicsImpostor.physicsBody.ptr === colObj1);
         colObj0 = Ammo.wrapPointer(colObj0, Ammo.btRigidBody);
 
-        if (colObj0.isCar && bodyIndex !== -1) {
+        if (colObj0.isCar && bodyIndex !== - 1 && !enemies.getEnemiesArray()[bodyIndex].isStop) {
+            const isHuman = enemies.getEnemiesArray()[bodyIndex].isHuman;
+
             enemies.getEnemiesArray()[bodyIndex].isStop = true;
-            updatePopup.updateCounter(enemies.getEnemiesArray()[bodyIndex].isHuman);
-            enemies.getEnemiesArray().splice(bodyIndex, 1);
+            updatePopup.updateCounter(isHuman, enemies.updateEnemiesCount(isHuman));
         }
     }
 

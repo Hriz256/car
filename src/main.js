@@ -3,8 +3,7 @@ import {timer} from './timer';
 import {createPlayground} from "./playground";
 import {createFinishPopup, createUpdatePopup} from "./popup";
 import {createVehicle, car} from "./car";
-import {createEnemies} from './erratic';
-import * as BABYLON from "babylonjs";
+import {createEnemies} from './enemies';
 
 const main = (scene, camera, canvas) => {
     mesh.scene = scene;
@@ -14,52 +13,49 @@ const main = (scene, camera, canvas) => {
     materials.createColor('green', '#92C74F');
     materials.createColor('lightColor', '#feff7f');
     materials.createColor('white', '#ffffff');
-    materials.createTexture('tyre2', 'png');
 
     createPlayground(scene);
-    // const finishPopup = createFinishPopup(canvas);
-    const updatePopup = createUpdatePopup();
-
-    // requestAnimationFrame(timer.run);
 
     const enemies = createEnemies(scene);
+    const updatePopup = createUpdatePopup();
+
+    const restartGame = () => {
+        enemies.restart();
+        updatePopup.resetValues();
+        timer.isStop = false;
+        timer.restart(3);
+    };
+
+    const finishPopup = createFinishPopup(canvas, restartGame);
+
     camera.lockedTarget = createVehicle(scene, enemies, updatePopup);
 
     scene.registerBeforeRender(() => {
-        // const time = timer.getTime();
-        //
-        // updatePopup.updateTimer(timer.getTime());
+        if (!timer.isStop && car.vehicleReady) {
+            const {ms, time} = timer.getTime();
+            const isWin = enemies.checkVictory();
 
-        Array.from(enemies.getEnemiesArray(), item => {
-            if (!item.isStop) {
-                item.sphere.translate(
-                    new BABYLON.Vector3(item.x - item.sphere.position.x, 0, item.z - item.sphere.position.z).normalize(),
-                    item.sphereSpeed,
-                    BABYLON.Space.WORLD
-                );
-
-                item.body.lookAt(item.sphere.position);
-                item.setLinearVelocity();
-
-                if (item.sphere.intersectsPoint(new BABYLON.Vector3(item.x, item.bodyHeight / 2, item.z))) {
-                    item.changeCoords();
-                }
-
-                if (scene.getMeshByName('intersectBox') && item.sphere.intersectsMesh(scene.getMeshByName('intersectBox'))) {
-                    item.x = item.sphere.position.x - car.chassisMesh.position.x;
-                    item.z = item.sphere.position.z - car.chassisMesh.position.z;
-
-                    item.sphere.translate(
-                        new BABYLON.Vector3(item.sphere.position.x - car.chassisMesh.position.x, 0, item.sphere.position.z - car.chassisMesh.position.z).normalize(),
-                        item.sphereSpeed,
-                        BABYLON.Space.WORLD
-                    );
-                }
-            } else {
-                this.body.getChildren()[0].idleAnim.weight = 1;
-                this.body.getChildren()[0].runAnim.speedRatio = 0;
+            if (ms <= 0) {
+                timer.isStop = true;
+                finishPopup.showPopup(false);
             }
-        });
+
+            if (isWin) {
+                timer.isStop = true;
+                finishPopup.showPopup(isWin !== 'humans');
+            }
+
+            updatePopup.updateTimer({ms, time});
+
+            Array.from(enemies.getEnemiesArray(), (item, index) => {
+                if (!item.isStop) {
+                    item.move();
+                } else {
+                    item.body.getChildren()[0].idleAnim.weight = 1;
+                    item.body.getChildren()[0].runAnim.speedRatio = 0;
+                }
+            });
+        }
     })
 };
 

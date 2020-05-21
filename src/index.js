@@ -2,25 +2,19 @@ import * as BABYLON from 'babylonjs';
 // import './ammo.js';
 import 'babylonjs-loaders'
 import {main} from './main';
-import {createVehicle} from "./car";
-import erratic from './erratic';
-import {materials, mesh} from "./materials";
-import {createPlayground} from './playground';
-import {createFinishPopup} from './popup';
-import timer from "./timer";
 
 const canvas = document.getElementById("renderCanvas");
 let scene = null;
 
 const createDefaultEngine = () => new BABYLON.Engine(canvas, true, {preserveDrawingBuffer: true, stencil: true});
 
-const updateScene = () => {
-    erratic.update();
-    scene.dispose();
-    scene = createScene();
-    erratic.createBodies(scene);
-    timer.update();
-};
+// const updateScene = () => {
+//     erratic.update();
+//     scene.dispose();
+//     scene = createScene();
+//     erratic.createBodies(scene);
+//     timer.update();
+// };
 
 const createScene = function () {
     const scene = new BABYLON.Scene(engine);
