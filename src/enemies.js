@@ -33,15 +33,16 @@ const run = (newHuman, speed, scene) => {
 class Body {
     constructor(index, scene, human) {
         this.scene = scene;
-        this.bodyHeight = 2.5;
+        this.bodyHeight = 2.3;
         this.human = human;
         this.isHuman = index < 10;
-        this.mass = 10;
+        this.mass = 50;
         this.x = getX(20, 45);
         this.z = getZ(20, 45);
         this.body = null;
         this.isStop = false;
         this.sphereSpeed = 0.3;
+        this.temporaryStop = false;
     }
 
     createSkeleton() {
@@ -59,11 +60,11 @@ class Body {
 
     createBody() {
         this.body = mesh.createBox({
-            size: {x: 0.8, y: this.bodyHeight, z: 0.8},
+            size: {x: 1, y: this.bodyHeight, z: 1},
             position: {x: this.x, y: 0, z: this.z},
             material: materials['lightColor']
         });
-        this.body.setPhysics({mass: this.mass});
+        this.body.setPhysics({mass: this.mass, friction: 1});
         this.body.isVisible = false;
 
         this.sphere = mesh.createSphere({
@@ -71,7 +72,7 @@ class Body {
             position: {x: this.x, y: this.bodyHeight / 2, z: this.z},
             material: materials['lightColor']
         });
-        // this.sphere.isVisible = false;
+        this.sphere.isVisible = false;
 
         this.createSkeleton();
     }
@@ -91,11 +92,11 @@ class Body {
             this.x = this.sphere.position.x - car.chassisMesh.position.x;
             this.z = this.sphere.position.z - car.chassisMesh.position.z;
 
-            // this.sphere.translate(
-            //     new BABYLON.Vector3(this.sphere.position.x - car.chassisMesh.position.x, 0, this.sphere.position.z - car.chassisMesh.position.z).normalize(),
-            //     this.sphereSpeed,
-            //     BABYLON.Space.WORLD
-            // );
+            this.sphere.translate(
+                new BABYLON.Vector3(this.sphere.position.x - car.chassisMesh.position.x, 0, this.sphere.position.z - car.chassisMesh.position.z).normalize(),
+                this.sphereSpeed,
+                BABYLON.Space.WORLD
+            );
         }
 
         this.sphere.translate(
@@ -112,11 +113,16 @@ class Body {
         }
     }
 
+    stopRun() {
+        this.body.getChildren()[0].idleAnim.weight = 1;
+        this.body.getChildren()[0].runAnim.speedRatio = 0;
+    }
+
     setLinearVelocity() {
         const boxPosition = this.body.physicsImpostor.getObjectCenter();
-        const vector = new BABYLON.Vector3((this.sphere.position.x - boxPosition.x) * 5, 0, (this.sphere.position.z - boxPosition.z) * 5);
+        const vector = new BABYLON.Vector3(this.sphere.position.x - boxPosition.x, 0, this.sphere.position.z - boxPosition.z);
 
-        this.body.physicsImpostor.setLinearVelocity(vector);
+        this.body.physicsImpostor.setLinearVelocity(Math.hypot(vector.x, vector.z) > 0.5 ? vector.scale(5) : vector);
     }
 
     changeCoords() {

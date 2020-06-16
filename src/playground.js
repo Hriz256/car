@@ -1,15 +1,12 @@
-import * as BABYLON from "babylonjs";
 import {materials, mesh} from "./materials";
 
-const createPlayground = (scene) => {
-    const ground = BABYLON.Mesh.CreateGround("ground", 1000, 1000, 2, scene);
-
-    ground.material = materials['green'];
-    ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, {
-        mass: 0,
-        friction: 0.5,
-        restitution: 0.7
-    }, scene);
+const createPlayground = () => {
+    const ground = mesh.createGround({
+        width: 1000,
+        height: 1000,
+        material: materials['green']
+    });
+    ground.setPhysics({friction: 1});
 
     const border0 = mesh.createBox({
         size: {x: 1, y: 10, z: 100},

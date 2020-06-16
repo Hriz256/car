@@ -5,6 +5,7 @@ import {createPopup} from './popup';
 import {createVehicle, car} from './car';
 import {createEnemies} from './enemies';
 import * as BABYLON from 'babylonjs';
+import {sounds} from "./sounds";
 
 const load = (scene) => {
     const assetsManager = new BABYLON.AssetsManager(scene);
@@ -22,6 +23,10 @@ const load = (scene) => {
 const main = async (scene, camera, canvas) => {
     const tasks = await load(scene);
 
+    sounds.scene = scene;
+    sounds.setSound({name: 'drive', autoplay: true, loop: false});
+    sounds.setSound({name: 'drop'});
+
     mesh.scene = scene;
 
     materials.scene = scene;
@@ -30,7 +35,7 @@ const main = async (scene, camera, canvas) => {
     materials.createColor('lightColor', '#feff7f');
     materials.createColor('white', '#ffffff');
 
-    createPlayground(scene);
+    createPlayground();
 
     const enemies = createEnemies(scene, tasks[2]);
 
@@ -38,11 +43,10 @@ const main = async (scene, camera, canvas) => {
         enemies.restart();
         car.setCarOrigin({y: 10});
         timer.isStop = false;
-        timer.restart(3);
+        timer.restart(2);
     };
 
     const popup = createPopup(canvas, restartGame);
-
     camera.lockedTarget = createVehicle(scene, enemies, popup, {carTask: tasks[0], wheelTask: tasks[1]});
 
     scene.registerBeforeRender(() => {
@@ -50,25 +54,26 @@ const main = async (scene, camera, canvas) => {
             const {ms, time} = timer.getTime();
             const isWin = enemies.checkVictory();
 
-            if (ms <= 0) {
-                timer.isStop = true;
-                popup.showPopup(false);
-            }
-
             if (isWin) {
                 timer.isStop = true;
                 popup.showPopup(isWin !== 'humans');
             }
 
+            if (ms <= 0) {
+                timer.isStop = true;
+                popup.showPopup(false);
+            }
+
+            // if (car.wheelsAboveTheCenter() && !Math.floor(car.vehicle.getCurrentSpeedKmHour())) {
+            //     timer.isStop = true;
+            //     popup.showPopup(false);
+            // }
+
             popup.updateTimer({ms, time});
 
             Array.from(enemies.getEnemiesArray(), item => {
-                if (!item.isStop) {
-                    item.move();
-                } else {
-                    item.body.getChildren()[0].idleAnim.weight = 1;
-                    item.body.getChildren()[0].runAnim.speedRatio = 0;
-                }
+                item.isStop && item.stopRun();
+                !item.isStop && !item.temporaryStop && item.move();
             });
         }
     });

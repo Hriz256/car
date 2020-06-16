@@ -1,18 +1,20 @@
 import * as BABYLON from 'babylonjs';
 import {materials, mesh} from "./materials";
+import {sounds} from "./sounds";
 
 const car = {
     vehicle: null,
     wheelMeshes: [],
     vehicleReady: false,
-    steeringIncrement: .02,
+    steeringIncrement: .25,
     steeringClamp: 0.5,
-    maxEngineForce: 2500,
-    maxBreakingForce: 40,
+    maxEngineForce: 5000,
+    maxBreakingForce: 60,
     engineForce: 0,
     vehicleSteering: 0,
     breakingForce: 0,
     chassisMesh: null,
+    detectMesh: null,
 
     setCarOrigin({x = 0, y = 0, z = 0}) {
         const quat = new BABYLON.Quaternion();
@@ -23,13 +25,32 @@ const car = {
         transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 
         this.vehicle.getRigidBody().setMotionState(new Ammo.btDefaultMotionState(transform));
+    },
+
+    wheelsAboveTheCenter() {
+        return this.wheelMeshes.every(wheel => wheel.position.y > this.chassisMesh.position.y);
+    }
+};
+
+const collisions = {};
+
+const acceleration = {
+    timeStart: null,
+    allow: false,
+
+    setAllow(value) {
+        this.allow = value;
+
+        if (value) {
+            this.timeStart = Date.now();
+        }
     }
 };
 
 const chassisWidth = 1.6;
-const chassisHeight = 0.5;
-const chassisLength = 4;
-const massVehicle = 350;
+const chassisHeight = 0.7;
+const chassisLength = 3.9;
+const massVehicle = 700;
 
 const wheelAxisPositionBack = -1.13; // расположение оси задних колёс
 const wheelRadiusBack = .36;
@@ -41,9 +62,9 @@ const wheelRadiusFront = .36;
 const wheelHalfTrackFront = 0.74;
 const wheelAxisHeightFront = 0.4;
 
-const suspensionStiffness = 25; // насколько сильно машина будет проседать при разгоне и торможении
+const suspensionStiffness = 30; // насколько сильно машина будет проседать при разгоне и торможении
 const suspensionDamping = 0.3;
-const suspensionCompression = 4.4;
+const suspensionCompression = 4.4; // как сильно машину "пружинит"
 const suspensionRestLength = 0.6;
 const rollInfluence = 0.0;
 
@@ -60,6 +81,7 @@ const actions = {
     right: false,
     left: false
 };
+
 const keysActions = {
     "KeyW": 'acceleration',
     "KeyS": 'braking',
@@ -67,24 +89,63 @@ const keysActions = {
     "KeyD": 'right'
 };
 
-
 const update = (scene) => {
     scene.registerBeforeRender(() => {
         const speed = car.vehicle.getCurrentSpeedKmHour();
         car.breakingForce = 0;
         car.engineForce = 0;
 
+        // sounds.setVolume({sound: 'drive', volume: 1});
+
+        if (Date.now() - acceleration.timeStart > 2000 && acceleration.allow) {
+            acceleration.setAllow(false);
+        }
+
+        const speedZ = Math.floor(car.vehicle.getRigidBody().getLinearVelocity().z());
+        const speedX = Math.floor(car.vehicle.getRigidBody().getLinearVelocity().x());
+
         if (actions.acceleration) {
-            if (speed < -1) {
-                car.breakingForce = car.maxBreakingForce;
-            } else if (speed >= -1 && speed < 110) {
+            if (Math.floor(speed) < 0) {
+                let z = 0;
+                let x = 0;
+
+                if (Math.floor(speedZ) >= 0) {
+                    z = -50
+                } else if (Math.floor(speedZ) < 0) {
+                    z = 50;
+                }
+
+                if (Math.floor(speedX) >= 0) {
+                    x = -50
+                } else if (Math.floor(speedX) < 0) {
+                    x = 50;
+                }
+
+                car.vehicle.getRigidBody().setGravity(new Ammo.btVector3(x, -10, z));
+            } else if (Math.floor(speed) >= 0 && Math.floor(speed) <= 70) {
+                car.vehicle.getRigidBody().setGravity(new Ammo.btVector3(0, -10, 0));
                 car.engineForce = car.maxEngineForce;
             }
-
         } else if (actions.braking) {
-            if (speed > 1) {
-                car.breakingForce = car.maxBreakingForce;
-            } else if (speed <= 1 && speed > -60) {
+            if (Math.floor(speed) > 0) {
+                let z = 0;
+                let x = 0;
+
+                if (Math.floor(speedZ) >= 0) {
+                    z = -50
+                } else if (Math.floor(speedZ) < 0) {
+                    z = 50;
+                }
+
+                if (Math.floor(speedX) >= 0) {
+                    x = -50
+                } else if (Math.floor(speedX) < 0) {
+                    x = 50;
+                }
+
+                car.vehicle.getRigidBody().setGravity(new Ammo.btVector3(x, -10, z));
+            } else if (Math.floor(speed) <= 0 && Math.floor(speed) > -70) {
+                car.vehicle.getRigidBody().setGravity(new Ammo.btVector3(0, -10, 0));
                 car.engineForce = -car.maxEngineForce;
             }
         }
@@ -94,6 +155,7 @@ const update = (scene) => {
 
             if (speed < 1 && speed > -1) {
                 car.engineForce = 0;
+                car.breakingForce = 0;
             }
         }
 
@@ -111,7 +173,6 @@ const update = (scene) => {
             car.vehicleSteering = 0;
         }
 
-
         car.vehicle.applyEngineForce(car.engineForce, wheelsIndex.front_left);
         car.vehicle.applyEngineForce(car.engineForce, wheelsIndex.front_right);
 
@@ -122,7 +183,6 @@ const update = (scene) => {
 
         car.vehicle.setSteeringValue(car.vehicleSteering, wheelsIndex.front_left);
         car.vehicle.setSteeringValue(car.vehicleSteering, wheelsIndex.front_right);
-
 
         let tm, p, q;
 
@@ -135,6 +195,7 @@ const update = (scene) => {
             car.wheelMeshes[index].rotationQuaternion.set(q.x(), q.y(), q.z(), q.w());
             car.wheelMeshes[index].rotate(BABYLON.Axis.Z, Math.PI / 2);
         });
+
 
         tm = car.vehicle.getChassisWorldTransform();
         p = tm.getOrigin();
@@ -150,7 +211,6 @@ const createIntersectPlane = () => {
         name: 'intersectBox',
         size: {x: 20, y: 20, z: 20},
         position: {x: 0, y: 0, z: 0},
-        rotation: {x: Math.PI / 2, y: 0, z: 0},
         material: materials['red']
     });
 
@@ -163,6 +223,7 @@ const createCarBody = (carTask) => {
     car.chassisMesh = mesh.createBox({
         size: {x: chassisWidth, y: chassisHeight, z: chassisLength},
         position: {x: 0, y: 0, z: 0},
+        rotation: {x: Math.PI / 2, y: 0, z: 0},
         material: materials['lightColor']
     });
 
@@ -230,7 +291,31 @@ function createVehicle(scene, enemies, updatePopup, {carTask, wheelTask}) {
         const bodyIndex = enemies.getEnemiesArray().findIndex(i => i.body.physicsImpostor.physicsBody.ptr === colObj1);
         colObj0 = Ammo.wrapPointer(colObj0, Ammo.btRigidBody);
 
-        if (colObj0.isCar && bodyIndex !== -1 && !enemies.getEnemiesArray()[bodyIndex].isStop) {
+
+        if (colObj0.isCar) {
+            const collisionTime = collisions[colObj1] || 0;
+
+            console.log(Date.now() - collisionTime)
+            if (Date.now() - collisionTime > 400) {
+                sounds.setVolume({
+                    sound: 'drop',
+                    volume: Math.min(Math.abs(car.vehicle.getCurrentSpeedKmHour()) / 200, 0.3)
+                });
+                sounds['drop'].play();
+            }
+        }
+
+        collisions[colObj1] = Date.now();
+
+        if (colObj0.isCar && bodyIndex !== -1 && !enemies.getEnemiesArray()[bodyIndex].temporaryStop && car.vehicle.getCurrentSpeedKmHour() < 50) {
+            enemies.getEnemiesArray()[bodyIndex].temporaryStop = true;
+
+            setTimeout(() => {
+                enemies.getEnemiesArray()[bodyIndex].temporaryStop = false;
+            }, 2000);
+        }
+
+        if (colObj0.isCar && bodyIndex !== -1 && !enemies.getEnemiesArray()[bodyIndex].isStop && car.vehicle.getCurrentSpeedKmHour() > 50) {
             const isHuman = enemies.getEnemiesArray()[bodyIndex].isHuman;
 
             enemies.getEnemiesArray()[bodyIndex].isStop = true;
@@ -285,12 +370,21 @@ window.addEventListener('keydown', (e) => {
     if (keysActions[e.code]) {
         actions[keysActions[e.code]] = true;
     }
+
+    if (e.code === 'ShiftLeft') {
+        acceleration.setAllow(true);
+    }
 });
 
 window.addEventListener('keyup', (e) => {
     if (keysActions[e.code]) {
         actions[keysActions[e.code]] = false;
     }
+
+    if (e.code === 'ShiftLeft') {
+        acceleration.setAllow(false);
+    }
 });
+
 
 export {createVehicle, car};

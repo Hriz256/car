@@ -9,25 +9,6 @@ const materials = {
 
         return this[color];
     },
-
-    createTexture(texture, format = 'jpg') {
-        this[texture] = new BABYLON.StandardMaterial(`${texture}`, this.scene);
-        this[texture].diffuseTexture = new BABYLON.Texture(`assets/${texture}.${format}`, this.scene);
-    }
-};
-
-const createBox = (size, position, rotation = new BABYLON.Vector3(0, 0, 0), mass = 0, scene) => {
-    const box = new BABYLON.MeshBuilder.CreateBox("box", {width: size.x, depth: size.z, height: size.y}, scene);
-    box.position.set(position.x, position.y, position.z);
-    box.rotation.set(rotation.x, rotation.y, rotation.z);
-
-    box.physicsImpostor = new BABYLON.PhysicsImpostor(box, BABYLON.PhysicsImpostor.BoxImpostor, {
-        mass: mass,
-        friction: 0.4,
-        restitution: 1
-    }, scene);
-
-    return box;
 };
 
 const mesh = {
@@ -59,7 +40,7 @@ const mesh = {
     },
 
     createGround({width, height, ...generalParams}) {
-        const ground = BABYLON.MeshBuilder.CreateGround('ground', {width, height, subdivisions: 25}, this.scene);
+        const ground = BABYLON.MeshBuilder.CreateGround('ground', {width, height, subdivisions: 2}, this.scene);
         this._generalParams(ground, generalParams);
 
         return ground;
@@ -73,7 +54,7 @@ const mesh = {
         }, this.scene);
     },
 
-    _generalParams(mesh, {position, rotation = new BABYLON.Vector3(0, 0, 0), material}) {
+    _generalParams(mesh, {position = new BABYLON.Vector3(0, 0, 0), rotation = new BABYLON.Vector3(0, 0, 0), material}) {
         mesh.position.set(position.x, position.y, position.z);
         mesh.rotation.set(rotation.x, rotation.y, rotation.z);
         mesh.material = material;
@@ -81,4 +62,4 @@ const mesh = {
     },
 };
 
-export {createBox, materials, mesh};
+export {materials, mesh};
