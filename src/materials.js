@@ -1,14 +1,27 @@
 import * as BABYLON from 'babylonjs';
 
+const colors = {
+    'red': '#c7583f',
+    'green': '#92C74F',
+    'lightColor': '#feff7f',
+    'white': '#ffffff'
+};
+
 const materials = {
     scene: null,
     createColor(color, hex) {
         this[color] = new BABYLON.StandardMaterial(`${color}`, this.scene);
         this[color].diffuseColor = new BABYLON.Color3.FromHexString(hex);
-        // this[color].emissiveColor = new BABYLON.Color3.FromHexString(hex);
 
         return this[color];
     },
+
+    // Создать цвета
+    setColors(scene) {
+        this.scene = scene;
+
+        Array.from(Object.entries(colors), color => this.createColor(color[0], color[1]))
+    }
 };
 
 const mesh = {
@@ -54,10 +67,11 @@ const mesh = {
         }, this.scene);
     },
 
-    _generalParams(mesh, {position = new BABYLON.Vector3(0, 0, 0), rotation = new BABYLON.Vector3(0, 0, 0), material}) {
+    _generalParams(mesh, {position = new BABYLON.Vector3(0, 0, 0), rotation = new BABYLON.Vector3(0, 0, 0), material, visible = false}) {
         mesh.position.set(position.x, position.y, position.z);
         mesh.rotation.set(rotation.x, rotation.y, rotation.z);
         mesh.material = material;
+        mesh.isVisible = visible;
         mesh.setPhysics = this.setPhysics;
     },
 };

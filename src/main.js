@@ -2,7 +2,7 @@ import {materials, mesh} from './materials';
 import {timer} from './timer';
 import {createPlayground} from './playground';
 import {createPopup} from './popup';
-import {createVehicle, car} from './car';
+import {createVehicle, car} from './car/car';
 import {createEnemies} from './enemies';
 import * as BABYLON from 'babylonjs';
 import {sounds} from "./sounds";
@@ -20,35 +20,7 @@ const load = (scene) => {
     });
 };
 
-const main = async (scene, camera, canvas) => {
-    const tasks = await load(scene);
-
-    sounds.scene = scene;
-    sounds.setSound({name: 'drive', autoplay: true, loop: false});
-    sounds.setSound({name: 'drop'});
-
-    mesh.scene = scene;
-
-    materials.scene = scene;
-    materials.createColor('red', '#c7583f');
-    materials.createColor('green', '#92C74F');
-    materials.createColor('lightColor', '#feff7f');
-    materials.createColor('white', '#ffffff');
-
-    createPlayground();
-
-    const enemies = createEnemies(scene, tasks[2]);
-
-    const restartGame = () => {
-        enemies.restart();
-        car.setCarOrigin({y: 10});
-        timer.isStop = false;
-        timer.restart(2);
-    };
-
-    const popup = createPopup(canvas, restartGame);
-    camera.lockedTarget = createVehicle(scene, enemies, popup, {carTask: tasks[0], wheelTask: tasks[1]});
-
+const update = (scene, enemies, popup) => {
     scene.registerBeforeRender(() => {
         if (!timer.isStop) {
             const {ms, time} = timer.getTime();
@@ -64,19 +36,43 @@ const main = async (scene, camera, canvas) => {
                 popup.showPopup(false);
             }
 
-            // if (car.wheelsAboveTheCenter() && !Math.floor(car.vehicle.getCurrentSpeedKmHour())) {
-            //     timer.isStop = true;
-            //     popup.showPopup(false);
-            // }
+            if (car.wheelsAboveTheCenter() && !Math.floor(car.vehicle.getCurrentSpeedKmHour())) {
+                timer.isStop = true;
+                popup.showPopup(false);
+            }
 
             popup.updateTimer({ms, time});
 
             Array.from(enemies.getEnemiesArray(), item => {
                 item.isStop && item.stopRun();
-                !item.isStop && !item.temporaryStop && item.move();
+                !item.isStop && item.move();
             });
         }
     });
+};
+
+const main = async (scene, canvas) => {
+    const tasks = await load(scene);
+
+    sounds.setSounds(scene);
+    materials.setColors(scene);
+    mesh.scene = scene;
+
+    createPlayground();
+
+    const enemies = createEnemies(scene, tasks[2]);
+
+    const restartGame = () => {
+        enemies.restart();
+        car.setCarOrigin({y: 10});
+        timer.isStop = false;
+        timer.restart(2);
+    };
+
+    const popup = createPopup(canvas, restartGame);
+    scene.cameras[0].lockedTarget = createVehicle(scene, enemies, popup, {carTask: tasks[0], wheelTask: tasks[1]}); // камера будет двигаться за машиной
+
+    update(scene, enemies, popup);
 };
 
 export {main};

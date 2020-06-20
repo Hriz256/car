@@ -1,25 +1,19 @@
 import * as BABYLON from 'babylonjs';
 import {materials, mesh} from './materials';
-import {car} from './car';
+import {car} from './car/car';
 
 function getRandomInt(min, max) {
     return Math.floor(min + Math.random() * (max + 1 - min));
 }
 
-const getZ = (min, max) => {
+const getPoint = (min, max) => {
     const positiveZ = getRandomInt(min, max);
     const negativeZ = getRandomInt(-max, -min);
 
     return [positiveZ, negativeZ][getRandomInt(0, 1)];
 };
 
-const getX = (min, max) => {
-    const positiveX = getRandomInt(min, max);
-    const negativeX = getRandomInt(-max, -min);
-
-    return [positiveX, negativeX][getRandomInt(0, 1)];
-};
-
+// Запускаем анимацию бега
 const run = (newHuman, speed, scene) => {
     const idleRange = newHuman.skeleton.getAnimationRange('YBot_Idle');
     const walkRange = newHuman.skeleton.getAnimationRange('YBot_Walk');
@@ -37,12 +31,11 @@ class Body {
         this.human = human;
         this.isHuman = index < 10;
         this.mass = 50;
-        this.x = getX(20, 45);
-        this.z = getZ(20, 45);
+        this.x = getPoint(20, 45);
+        this.z = getPoint(20, 45);
         this.body = null;
         this.isStop = false;
         this.sphereSpeed = 0.3;
-        this.temporaryStop = false;
     }
 
     createSkeleton() {
@@ -59,20 +52,21 @@ class Body {
     }
 
     createBody() {
+        // Создаём физическую коробку, которая является родителем человечка
         this.body = mesh.createBox({
-            size: {x: 1, y: this.bodyHeight, z: 1},
+            size: {x: this.bodyHeight * 0.6, y: this.bodyHeight, z: this.bodyHeight * 0.6},
             position: {x: this.x, y: 0, z: this.z},
-            material: materials['lightColor']
+            material: materials['lightColor'],
+            visible: true
         });
-        this.body.setPhysics({mass: this.mass, friction: 1});
-        this.body.isVisible = false;
+        this.body.setPhysics({mass: this.mass, friction: 1, restitution: 0});
 
+        // Создаём сферу коробку, за которой будет бегать человечек - надо для того, чтобы повороты не были резкими
         this.sphere = mesh.createSphere({
             diameter: 1,
             position: {x: this.x, y: this.bodyHeight / 2, z: this.z},
-            material: materials['lightColor']
+            material: materials['lightColor'],
         });
-        this.sphere.isVisible = false;
 
         this.createSkeleton();
     }
@@ -88,6 +82,7 @@ class Body {
     }
 
     move() {
+        // Если человечек попадает в квадратную зону вокруг машины - меняем направление (чтобы он не бежал на машину)
         if (this.scene.getMeshByName('intersectBox') && this.sphere.intersectsMesh(this.scene.getMeshByName('intersectBox'))) {
             this.x = this.sphere.position.x - car.chassisMesh.position.x;
             this.z = this.sphere.position.z - car.chassisMesh.position.z;
@@ -105,7 +100,7 @@ class Body {
             BABYLON.Space.WORLD
         );
 
-        this.body.lookAt(this.sphere.position);
+        this.body.lookAt(this.sphere.position); // поворачиваем человечка в сторону движения
         this.setLinearVelocity();
 
         if (this.sphere.intersectsPoint(new BABYLON.Vector3(this.x, this.bodyHeight / 2, this.z))) {
@@ -114,8 +109,8 @@ class Body {
     }
 
     stopRun() {
-        this.body.getChildren()[0].idleAnim.weight = 1;
-        this.body.getChildren()[0].runAnim.speedRatio = 0;
+        this.body.getChildren()[0].idleAnim.weight = 1; // руки вдоль туловища
+        this.body.getChildren()[0].runAnim.speedRatio = 0; // останавливаем анимацию бега
     }
 
     setLinearVelocity() {
@@ -126,8 +121,8 @@ class Body {
     }
 
     changeCoords() {
-        this.x = getX(20, 45);
-        this.z = getZ(20, 45);
+        this.x = getPoint(20, 45);
+        this.z = getPoint(20, 45);
     }
 }
 
